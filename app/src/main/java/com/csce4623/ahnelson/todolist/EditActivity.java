@@ -13,15 +13,19 @@ import android.widget.Toast;
 
 import static com.csce4623.ahnelson.todolist.ToDoProvider.mOpenHelper;
 
-public class NoteActivity extends AppCompatActivity implements View.OnClickListener {
+public class EditActivity extends AppCompatActivity implements View.OnClickListener {
 
     boolean titleExists = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.note_activity);
         initializeComponents();
+        String taskTitle = getIntent().getStringExtra("TASK");
+        EditText tvNoteTitle = findViewById(R.id.tvNoteTitle);
+        tvNoteTitle.setText(taskTitle);
     }
 
     //Set the OnClick Listener for buttons
@@ -36,7 +40,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btnSave:
                 checkTitle();
                 if(!titleExists) {
-                    createNoteContents();
+                    updateNoteContents();
 //                HomeActivity hm = new HomeActivity();
 //                hm.updateUI();
                     finish();
@@ -59,7 +63,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
 
         Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
-                new String[]{ToDoProvider.TODO_TABLE_COL_TITLE},
+                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE},
                 null, null, null, null, null);
         while (cursor.moveToNext()) {
             int cursorTitle = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_TITLE);
@@ -74,7 +78,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    public void createNoteContents(){
+    public void updateNoteContents(){
         //Create a ContentValues object
         ContentValues myCV = new ContentValues();
 
@@ -83,6 +87,7 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
 
         String title = tvNoteTitle.getText().toString();
         String content = etNoteContent.getText().toString();
+        String taskTitle = getIntent().getStringExtra("TASK");
 
         //Put key_value pairs based on the column names, and the values
         myCV.put(ToDoProvider.TODO_TABLE_COL_TITLE, title);

@@ -9,10 +9,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.content.Context;
 import com.csce4623.ahnelson.todolist.ToDoProvider;
@@ -25,6 +30,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import static android.content.ContentValues.TAG;
+import static com.csce4623.ahnelson.todolist.ToDoProvider.mOpenHelper;
 
 //Create HomeActivity and implement the OnClick listener
 public class HomeActivity extends AppCompatActivity implements View.OnClickListener{
@@ -33,6 +39,7 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
     public EditText editDate;
 //    public MainDatabaseHelper mOpenHelper;
     private ArrayAdapter<String> mAdapter;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,12 +54,22 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
 
         updateUI();
     }
+
     //Set the OnClick Listener for buttons
     void initializeComponents(){
         findViewById(R.id.btnNewNote).setOnClickListener(this);
         findViewById(R.id.btnDeleteNote).setOnClickListener(this);
 
+        View inflatedView = LayoutInflater.from(this).inflate(R.layout.list_activity, null);
+        inflatedView.findViewById(R.id.btnDone).setOnClickListener(this);
+    }
 
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+        updateUI();
+        Log.i(TAG, "On Start");
     }
 
 //    public void setDate (EditText editDate){
@@ -83,6 +100,23 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    public void btnDoneClick(View v){
+        deleteTask(v);
+    }
+
+    public void btnEditClick(View view){
+
+        Intent intent = new Intent(HomeActivity.this, EditActivity.class);
+        View parent = (View) view.getParent();
+        TextView taskTextView = (TextView) parent.findViewById(R.id.tvListNoteTitle);
+        String task = String.valueOf(taskTextView.getText());
+
+        intent.putExtra("TASK", task);
+
+        startActivity(intent);
+        updateUI();
+    }
+
     //Create a new note with the title "New Note" and content "Note Content"
     void createNewNote(){
         //Create a ContentValues object
@@ -107,6 +141,17 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         updateUI();
     }
 
+    public void deleteTask(View view) {
+        View parent = (View) view.getParent();
+        TextView taskTextView = (TextView) parent.findViewById(R.id.tvListNoteTitle);
+        String task = String.valueOf(taskTextView.getText());
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        db.delete(ToDoProvider.TABLE_NAME,
+                ToDoProvider.TODO_TABLE_COL_TITLE + " = ?",
+                new String[]{task});
+        db.close();
+        updateUI();
+    }
 
     //Delete the newest note placed into the database
     void deleteNewestNote(){
@@ -144,7 +189,7 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
 
     public void updateUI() {
         ArrayList<String> taskList = new ArrayList<>();
-        SQLiteDatabase db = ToDoProvider.mOpenHelper.getReadableDatabase();
+        SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
                 new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_CONTENT},
                 null, null, null, null, null);
