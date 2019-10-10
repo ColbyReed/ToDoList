@@ -111,7 +111,31 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         TextView taskTextView = (TextView) parent.findViewById(R.id.tvListNoteTitle);
         String task = String.valueOf(taskTextView.getText());
 
+        String taskID = "";
+        String taskContent = "";
+
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
+                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_CONTENT},
+                ToDoProvider.TODO_TABLE_COL_TITLE + " = ?", new String[]{task}, null, null, null);
+        while(cursor.moveToNext()) {
+            int id  = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_ID);
+            int title = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_TITLE);
+            int content = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_CONTENT);
+//            Log.d(TAG, "Task: " + cursor.getString(id) + " " + cursor.getString(title));
+            taskID = cursor.getString(id);
+            taskContent = cursor.getString(content);
+        }
+
+
+
+        cursor.close();
+
+        Log.d(TAG, "TaskID: " + taskID + " " + task);
+
         intent.putExtra("TASK", task);
+        intent.putExtra("TASK_ID", taskID);
+        intent.putExtra("TASK_CONTENT", taskContent);
 
         startActivity(intent);
         updateUI();
@@ -124,13 +148,15 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         //Put key_value pairs based on the column names, and the values
         myCV.put(ToDoProvider.TODO_TABLE_COL_TITLE,"New Note Test");
         myCV.put(ToDoProvider.TODO_TABLE_COL_CONTENT,"Note Content");
+        myCV.put(ToDoProvider.TODO_TABLE_COL_DATE, System.currentTimeMillis());
         //Perform the insert function using the ContentProvider
         getContentResolver().insert(ToDoProvider.CONTENT_URI,myCV);
         //Set the projection for the columns to be returned
         String[] projection = {
                 ToDoProvider.TODO_TABLE_COL_ID,
                 ToDoProvider.TODO_TABLE_COL_TITLE,
-                ToDoProvider.TODO_TABLE_COL_CONTENT};
+                ToDoProvider.TODO_TABLE_COL_CONTENT,
+                ToDoProvider.TODO_TABLE_COL_DATE};
         //Perform a query to get all rows in the DB
         Cursor myCursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,null);
         //Create a toast message which states the number of rows currently in the database

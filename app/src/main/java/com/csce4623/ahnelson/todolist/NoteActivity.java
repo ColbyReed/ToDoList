@@ -9,9 +9,13 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.DateFormat;
+
 import static com.csce4623.ahnelson.todolist.ToDoProvider.mOpenHelper;
+import static java.lang.System.currentTimeMillis;
 
 public class NoteActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -22,6 +26,9 @@ public class NoteActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.note_activity);
         initializeComponents();
+
+        TextView etDatePicker = findViewById(R.id.etDatePicker);
+        etDatePicker.setText(DateFormat.getInstance().format(currentTimeMillis()));
     }
 
     //Set the OnClick Listener for buttons

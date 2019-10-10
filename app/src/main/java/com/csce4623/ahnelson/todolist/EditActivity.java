@@ -6,16 +6,19 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import static com.csce4623.ahnelson.todolist.ToDoProvider.TODO_TABLE_COL_ID;
 import static com.csce4623.ahnelson.todolist.ToDoProvider.mOpenHelper;
 
 public class EditActivity extends AppCompatActivity implements View.OnClickListener {
 
     boolean titleExists = false;
+    private static final String TAG = HomeActivity.class.getSimpleName();
 
 
     @Override
@@ -24,8 +27,13 @@ public class EditActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.note_activity);
         initializeComponents();
         String taskTitle = getIntent().getStringExtra("TASK");
+        String taskID = getIntent().getStringExtra("TASK_ID");
+        String taskContent = getIntent().getStringExtra("TASK_CONTENT");
         EditText tvNoteTitle = findViewById(R.id.tvNoteTitle);
         tvNoteTitle.setText(taskTitle);
+        EditText etNoteContent = findViewById(R.id.etNoteContent);
+        etNoteContent.setText(taskContent);
+        Log.d(TAG, "TaskID: " + taskID + " " + taskTitle);
     }
 
     //Set the OnClick Listener for buttons
@@ -59,15 +67,22 @@ public class EditActivity extends AppCompatActivity implements View.OnClickListe
     public void checkTitle() {
         EditText tvNoteTitle = findViewById(R.id.tvNoteTitle);
         String title = tvNoteTitle.getText().toString();
+        String taskID = getIntent().getStringExtra("TASK_ID");
+
+        String stringTitle = "";
+        String stringID = "";
 
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
 
         Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
-                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE},
+                new String[]{ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_ID},
                 null, null, null, null, null);
-        while (cursor.moveToNext()) {
+        while (cursor.moveToNext() && !titleExists) {
             int cursorTitle = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_TITLE);
-            if(cursor.getString(cursorTitle).equals(title)){
+            int cursorID = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_ID);
+            stringTitle = cursor.getString(cursorTitle);
+            stringID = cursor.getString(cursorID);
+            if(stringTitle.equals(title) && !stringID.equals(taskID)){
                 titleExists = true;
             }else{
                 titleExists = false;
@@ -79,27 +94,21 @@ public class EditActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     public void updateNoteContents(){
-        //Create a ContentValues object
-        ContentValues myCV = new ContentValues();
-
         EditText tvNoteTitle = findViewById(R.id.tvNoteTitle);
         EditText etNoteContent = findViewById(R.id.etNoteContent);
 
+        String taskID = getIntent().getStringExtra("TASK_ID");
         String title = tvNoteTitle.getText().toString();
         String content = etNoteContent.getText().toString();
-        String taskTitle = getIntent().getStringExtra("TASK");
 
-        //Put key_value pairs based on the column names, and the values
-        myCV.put(ToDoProvider.TODO_TABLE_COL_TITLE, title);
-        myCV.put(ToDoProvider.TODO_TABLE_COL_CONTENT, content);
-        //Perform the insert function using the ContentProvider
-        getContentResolver().insert(ToDoProvider.CONTENT_URI,myCV);
-        //Set the projection for the columns to be returned
-        String[] projection = {
-                ToDoProvider.TODO_TABLE_COL_ID,
-                ToDoProvider.TODO_TABLE_COL_TITLE,
-                ToDoProvider.TODO_TABLE_COL_CONTENT};
-        //Perform a query to get all rows in the DB
-        Cursor myCursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,null);
+
+        ContentValues values = new ContentValues();
+        values.put(ToDoProvider.TODO_TABLE_COL_TITLE, title);
+        values.put(ToDoProvider.TODO_TABLE_COL_CONTENT, content);
+
+        SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+
+        int cursor = db.update(ToDoProvider.TABLE_NAME, values, TODO_TABLE_COL_ID + " = ?", new String[]{taskID});
+        db.close();
     }
 }
