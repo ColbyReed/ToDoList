@@ -142,7 +142,7 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         updateUI();
     }
 
-    private void updateUI() {
+    public void updateUI() {
         ArrayList<String> taskList = new ArrayList<>();
         SQLiteDatabase db = ToDoProvider.mOpenHelper.getReadableDatabase();
         Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
