@@ -5,40 +5,37 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.Context;
-import com.csce4623.ahnelson.todolist.ToDoProvider;
 
-import com.csce4623.ahnelson.todolist.ToDoProvider.MainDatabaseHelper;
-
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
+
 
 import static android.content.ContentValues.TAG;
+import static com.csce4623.ahnelson.todolist.ToDoProvider.TODO_TABLE_COL_DATE;
+import static com.csce4623.ahnelson.todolist.ToDoProvider.TODO_TABLE_COL_ID;
+import static com.csce4623.ahnelson.todolist.ToDoProvider.TODO_TABLE_COL_TITLE;
 import static com.csce4623.ahnelson.todolist.ToDoProvider.mOpenHelper;
 
 //Create HomeActivity and implement the OnClick listener
 public class HomeActivity extends AppCompatActivity implements View.OnClickListener{
 
     public ListView mTaskListView;
+    public ListView mCheckedListView;
     public EditText editDate;
-//    public MainDatabaseHelper mOpenHelper;
     private ArrayAdapter<String> mAdapter;
+    private ArrayAdapter<String> mCheckedAdapter;
 
 
     @Override
@@ -47,24 +44,25 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_home);
         initializeComponents();
 
+        //Further intitializing
         mTaskListView = (ListView) findViewById(R.id.list_todo);
+        mCheckedListView = (ListView) findViewById(R.id.list_checked);
+
         editDate = (EditText) findViewById(R.id.etDatePicker);
 
-//        setDate(editDate);
+        CheckBox chxBox = (CheckBox) findViewById(R.id.cbxCompleted);
 
+        //Updates view on start
         updateUI();
+
     }
 
     //Set the OnClick Listener for buttons
     void initializeComponents(){
         findViewById(R.id.btnNewNote).setOnClickListener(this);
-        findViewById(R.id.btnDeleteNote).setOnClickListener(this);
-
-        View inflatedView = LayoutInflater.from(this).inflate(R.layout.list_activity, null);
-        inflatedView.findViewById(R.id.btnDone).setOnClickListener(this);
     }
 
-
+    //Updates view after other activities finish
     @Override
     protected void onStart(){
         super.onStart();
@@ -72,27 +70,15 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         Log.i(TAG, "On Start");
     }
 
-//    public void setDate (EditText editDate){
-//
-//        Date today = Calendar.getInstance().getTime();//getting date
-//        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");//formating according to my need
-//        String date = formatter.format(today);
-//        editDate.setText(date);
-//    }
 
     @Override
     public void onClick(View v){
         switch (v.getId()){
-            //If new Note, call createNewNote()
+            //If new Note, open NoteActivity()
             case R.id.btnNewNote:
-//                createNewNote();
                 Intent intent = new Intent(HomeActivity.this, NoteActivity.class);
                 startActivity(intent);
                 updateUI();
-                break;
-            //If delete note, call deleteNewestNote()
-            case R.id.btnDeleteNote:
-                deleteNewestNote();
                 break;
             //This shouldn't happen
             default:
@@ -100,10 +86,44 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    //When check boxed is clicked, checks the state and saves it to database
+    public void onCheckboxClicked(View v) {
+
+        View parent = (View) v.getParent();
+
+        TextView taskTextView = (TextView) parent.findViewById(R.id.tvListNoteTitle);
+        String task = String.valueOf(taskTextView.getText());
+        boolean checked = ((CheckBox) v).isChecked();
+        ContentValues values = new ContentValues();
+
+        if (checked) {
+            values.put(ToDoProvider.TODO_TABLE_COL_COMPLETED, 1);
+        }else {
+            values.put(ToDoProvider.TODO_TABLE_COL_COMPLETED, 0);
+        }
+        SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+
+        db.update(ToDoProvider.TABLE_NAME, values, TODO_TABLE_COL_TITLE + " = ?", new String[]{task});
+        db.close();
+
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                //Do something after 100ms
+                updateUI();
+            }
+        }, 500);
+
+    }
+
+
+    //Deletes note from list
     public void btnDoneClick(View v){
         deleteTask(v);
     }
 
+    //Open EditActivity to allow user to update information and save the updates to the database
     public void btnEditClick(View view){
 
         Intent intent = new Intent(HomeActivity.this, EditActivity.class);
@@ -113,57 +133,34 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
 
         String taskID = "";
         String taskContent = "";
+        long taskDate = 0;
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
-                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_CONTENT},
+                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_CONTENT, ToDoProvider.TODO_TABLE_COL_DATE},
                 ToDoProvider.TODO_TABLE_COL_TITLE + " = ?", new String[]{task}, null, null, null);
         while(cursor.moveToNext()) {
             int id  = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_ID);
             int title = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_TITLE);
             int content = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_CONTENT);
+            int date = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_DATE);
 //            Log.d(TAG, "Task: " + cursor.getString(id) + " " + cursor.getString(title));
             taskID = cursor.getString(id);
             taskContent = cursor.getString(content);
+            taskDate = cursor.getLong(date);
         }
-
-
 
         cursor.close();
 
         Log.d(TAG, "TaskID: " + taskID + " " + task);
 
+        //Passes data to EditActivity
         intent.putExtra("TASK", task);
         intent.putExtra("TASK_ID", taskID);
         intent.putExtra("TASK_CONTENT", taskContent);
+        intent.putExtra("TASK_DATE", taskDate);
 
         startActivity(intent);
-        updateUI();
-    }
-
-    //Create a new note with the title "New Note" and content "Note Content"
-    void createNewNote(){
-        //Create a ContentValues object
-        ContentValues myCV = new ContentValues();
-        //Put key_value pairs based on the column names, and the values
-        myCV.put(ToDoProvider.TODO_TABLE_COL_TITLE,"New Note Test");
-        myCV.put(ToDoProvider.TODO_TABLE_COL_CONTENT,"Note Content");
-        myCV.put(ToDoProvider.TODO_TABLE_COL_DATE, System.currentTimeMillis());
-        //Perform the insert function using the ContentProvider
-        getContentResolver().insert(ToDoProvider.CONTENT_URI,myCV);
-        //Set the projection for the columns to be returned
-        String[] projection = {
-                ToDoProvider.TODO_TABLE_COL_ID,
-                ToDoProvider.TODO_TABLE_COL_TITLE,
-                ToDoProvider.TODO_TABLE_COL_CONTENT,
-                ToDoProvider.TODO_TABLE_COL_DATE};
-        //Perform a query to get all rows in the DB
-        Cursor myCursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,null);
-        //Create a toast message which states the number of rows currently in the database
-        Toast toast = Toast.makeText(getApplicationContext(),Integer.toString(myCursor.getCount()),Toast.LENGTH_LONG);
-        toast.setGravity(Gravity.TOP, 0, 0);
-        toast.show();
-
         updateUI();
     }
 
@@ -179,55 +176,32 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         updateUI();
     }
 
-    //Delete the newest note placed into the database
-    void deleteNewestNote(){
-        //Create the projection for the query
-        String[] projection = {
-                ToDoProvider.TODO_TABLE_COL_ID,
-                ToDoProvider.TODO_TABLE_COL_TITLE,
-                ToDoProvider.TODO_TABLE_COL_CONTENT};
-
-        //Perform the query, with ID Descending
-        Cursor myCursor = getContentResolver().query(ToDoProvider.CONTENT_URI,projection,null,null,"_ID DESC");
-        if(myCursor != null & myCursor.getCount() > 0) {
-            //Move the cursor to the beginning
-            myCursor.moveToFirst();
-            //Get the ID (int) of the newest note (column 0)
-            int newestId = myCursor.getInt(0);
-            //Delete the note
-            int didWork = getContentResolver().delete(Uri.parse(ToDoProvider.CONTENT_URI + "/" + newestId), null, null);
-            //If deleted, didWork returns the number of rows deleted (should be 1)
-            if (didWork == 1) {
-                //If it didWork, then create a Toast Message saying that the note was deleted
-                Toast toast =  Toast.makeText(getApplicationContext(), "Deleted Note " + newestId, Toast.LENGTH_LONG);
-                toast.setGravity(Gravity.TOP, 0, 0);
-                toast.show();
-            }
-        } else{
-            Toast toast = Toast.makeText(getApplicationContext(), "No Note to delete!", Toast.LENGTH_LONG);
-            toast.setGravity(Gravity.TOP, 0, 0);
-            toast.show();
-
-        }
-
-        updateUI();
-    }
-
+    //Updates the view
     public void updateUI() {
         ArrayList<String> taskList = new ArrayList<>();
+        ArrayList<String> checkedList = new ArrayList<>();
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = db.query(ToDoProvider.TABLE_NAME,
-                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_CONTENT},
+                new String[]{ToDoProvider.TODO_TABLE_COL_ID, ToDoProvider.TODO_TABLE_COL_TITLE, ToDoProvider.TODO_TABLE_COL_CONTENT, ToDoProvider.TODO_TABLE_COL_DATE, ToDoProvider.TODO_TABLE_COL_COMPLETED},
                 null, null, null, null, null);
         while(cursor.moveToNext()) {
             int id  = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_ID);
             int title = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_TITLE);
             int content = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_CONTENT);
+            int date = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_DATE);
+            int completed = cursor.getColumnIndex(ToDoProvider.TODO_TABLE_COL_COMPLETED);
 //            Log.d(TAG, "Task: " + cursor.getString(id) + " " + cursor.getString(title));
-            Log.d(TAG, "Task: " + cursor.getString(id) + " | " + cursor.getString(title) + " | " + cursor.getString(content));
-            taskList.add(cursor.getString(title));
+            Log.d(TAG, "Task: " + cursor.getString(id) + " | " + cursor.getString(title) + " | " + cursor.getString(content) + " | " + cursor.getString(completed) + " | " + cursor.getString(date));
+
+            //Checks if activity is completed, and assigns said activity to corresponding listview
+            if(cursor.getInt(completed) == 0) {
+                taskList.add(cursor.getString(title));
+            }else{
+                checkedList.add(cursor.getString(title));
+            }
         }
 
+        //Assigns to uncompleted list
         if (mAdapter == null) {
             mAdapter = new ArrayAdapter<>(this,
                     R.layout.list_activity,
@@ -239,6 +213,20 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
             mAdapter.addAll(taskList);
             mAdapter.notifyDataSetChanged();
         }
+
+        //Assigns to completed list
+        if (mCheckedAdapter == null) {
+            mCheckedAdapter = new ArrayAdapter<>(this,
+                    R.layout.checked_activity,
+                    R.id.tvListNoteTitle,
+                    checkedList);
+            mCheckedListView.setAdapter(mCheckedAdapter);
+        } else {
+            mCheckedAdapter.clear();
+            mCheckedAdapter.addAll(checkedList);
+            mCheckedAdapter.notifyDataSetChanged();
+        }
+
 
         cursor.close();
         db.close();

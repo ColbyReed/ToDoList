@@ -18,7 +18,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <receiver android:name=".BroadcastNotification"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name= "android.media.action.DISPLAY_NOTIFICATION" />
+            </intent-filter>
+        </receiver>
         <provider
             android:name=".ToDoProvider"
             android:authorities="com.csce4623.ahnelson.todolist.todoprovider"

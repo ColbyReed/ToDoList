@@ -21,7 +21,7 @@ public class ToDoProvider extends ContentProvider {
     //LOGTAG set to Class Name
     private static String LOGTAG = "ToDoProvider:";
     // Database Name for SQLITE DB
-    private static final String DBNAME = "ToDoDB";
+    private static final String DBNAME = "ToDoDBThree";
     // Authority is the package name
     private static final String AUTHORITY = "com.csce4623.ahnelson.todolist.todoprovider";
     //TABLE_NAME is defined as ToDoList
@@ -35,6 +35,7 @@ public class ToDoProvider extends ContentProvider {
     public static final String TODO_TABLE_COL_TITLE = "TITLE";
     public static final String TODO_TABLE_COL_CONTENT = "CONTENT";
     public static final String TODO_TABLE_COL_DATE = "DATE";
+    public static final String TODO_TABLE_COL_COMPLETED = "COMPLETED";
     //Table create string based on column names
     private static final String SQL_CREATE_MAIN = "CREATE TABLE " +
             TABLE_NAME+ " " +                       // Table's name
@@ -42,7 +43,8 @@ public class ToDoProvider extends ContentProvider {
             TODO_TABLE_COL_ID + " INTEGER PRIMARY KEY, " +
             TODO_TABLE_COL_TITLE + " TEXT," +
             TODO_TABLE_COL_CONTENT + " TEXT," +
-            TODO_TABLE_COL_DATE + " INTEGER)";
+            TODO_TABLE_COL_DATE + " INTEGER," +
+            TODO_TABLE_COL_COMPLETED + " INTEGER)";
 
     //URI Matcher object to facilitate switch cases between URIs
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
